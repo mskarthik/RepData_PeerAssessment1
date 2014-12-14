@@ -1,25 +1,124 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template.Rmd"
+date: "Saturday, December 13, 2014"
+output: html_document
 ---
+This is the mark down file created as per the PA1 instructions.
+
+**Loading and preprocessing the data**
+
+```{r}
+require(reshape)
+mydata<- read.csv("activity.csv")
+mydata.pivot <- melt(mydata, id = "date", measure = "steps", na.rm = TRUE)
+summary_by_date <- cast(mydata.pivot, date ~ ., sum)
+colnames(summary_by_date)<-c("date","sum_steps")
+```
+
+**What is mean total number of steps taken per day?**
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+1. Make a histogram of the total number of steps taken each day
+
+```{r}
+hist(summary_by_date$sum_steps)
+```
+
+2. Calculate and report the mean and median total number of steps taken per day
+
+Below are the mean value of the steps per day:
+
+```{r}
+mean(summary_by_date$sum_steps)
+```
+Below are the median value of the steps per day:
+```{r}
+median(summary_by_date$sum_steps)
+```
+**What is the average daily activity pattern?**
+
+1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+require(lattice)
+mydata.pivot <- melt(mydata, id = "interval", measure = "steps", na.rm = TRUE)
+summary_by_interval <- cast(mydata.pivot, interval ~ ., mean)
+colnames(summary_by_interval)<-c("interval","avg_steps")
+xyplot(avg_steps ~ interval, summary_by_interval, type = "l")
+
+```
+
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+max_interval_entry <- subset(summary_by_interval, avg_steps == max(summary_by_interval$avg_steps))
+max_interval_entry$interval
+```
+**Imputing missing values**
+
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+sum(!complete.cases(mydata))
+```
+
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+    *Filling NA values with mean for that 5-minute interval*
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r}
+mydata<-merge(mydata,summary_by_interval,by="interval")
+mydata$steps <- ifelse(is.na(mydata$steps),mydata$avg_steps,mydata$steps)
+mydata <- subset(mydata,select=c("interval","date","steps"))
+```
+
+4.  Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+mydata.pivot <- melt(mydata, id = "date", measure = "steps", na.rm = TRUE)
+summary_by_date <- cast(mydata.pivot, date ~ ., sum)
+colnames(summary_by_date)<-c("date","sum_steps")
+hist(summary_by_date$sum_steps)
+```
+
+The mean total number of steps taken per day is:
+
+```{r}
+mean(summary_by_date$sum_steps)
+```
+
+The median total number of steps taken per day is:
+
+```{r}
+median(summary_by_date$sum_steps)
+```
+
+*Adding the mising data seems to have increased the frequency of the days that had total steps ranging from 10000-15000 range.*
+
+**Are there differences in activity patterns between weekdays and weekends?**
+
+For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+dayasnumber <- as.POSIXlt(mydata$date)$wday
+mydata$dayasfactor <- factor(as.numeric((dayasnumber==6)|(dayasnumber==0)),labels=c("weekend","weekday"))
+```
+
+2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+```{r}
+mydata.pivot <- melt(mydata, id = c("dayasfactor","interval"), measure = "steps")
+summary_by_dayasfactor <- cast(mydata.pivot, interval ~ dayasfactor, mean)
+weekend.df <- subset(summary_by_dayasfactor,select=c("interval","weekend"))
+weekday.df <- subset(summary_by_dayasfactor,select=c("interval","weekday"))
+weekend.df$dayasfactor <- as.factor("weekend")
+weekday.df$dayasfactor <- as.factor("weekday")
+colnames(weekend.df)<-c("interval","avg_steps","day")
+colnames(weekday.df)<-c("interval","avg_steps","day")
+data_dayasfactor <- rbind(weekday.df,weekend.df)
+xyplot(avg_steps~interval|day,data=data_dayasfactor,layout=c(1,2),type="l")
+```
 
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
